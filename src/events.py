@@ -31,12 +31,10 @@ class FetchDate(commands.Cog):
         self.fetch_due_dates.cancel()
               
     # Declare the fetch_due_dates loop. Loop will fully execute every 24 hours.
-    @tasks.loop(minutes=60.00)
+    @tasks.loop(time=datetime.time(6, 30, tzinfo=LOCAL_TIMEZONE))
     async def fetch_due_dates(self):
 
         await self.bot.wait_until_ready()
-        if (datetime.datetime.now(LOCAL_TIMEZONE).hour != 6):
-            return
 
         channel = None
         # Check ANNOUNCEMENT_CHANNEL has been set otherwise use channel named announcements otherwise return error.
@@ -102,19 +100,19 @@ class FetchDate(commands.Cog):
 
             # Default case when the assignment course differs from the previous one.
             else:
-                embedded_message.add_field(name=f'__{current_code} - {current_course_name}__', value=course_assignments + '', inline=False)
+                embedded_message.add_field(name=f'__{current_code} - {current_course_name}__', value=course_assignments + '⠀', inline=False)
                 course_assignments = self.format_assignment(assignment)
                 current_code = assignment.code
                 current_course_name = assignment.course_name
 
         # Add the last field with the remaining course assignments.
-        embedded_message.add_field(name=f'__{current_code} - {current_course_name}__', value=course_assignments + '', inline=False)
+        embedded_message.add_field(name=f'__{current_code} - {current_course_name}__', value=course_assignments + '⠀', inline=False)
         
         # Add project information to bottom.
-        embedded_message.add_field(name='\n\nAbout Me', value='I am part of the Lakehead CS 2021 Guild\'s Discord-Bot project! [Contributions on GitHub are welcome!](https://github.com/Paulmski/Discord-Bot/blob/main/CONTRIBUTING.md)')
+        embedded_message.add_field(name='⠀\n⠀\nAbout Me', value='I am part of the Lakehead CS 2021 Guild\'s Discord-Bot project! [Contributions on GitHub are welcome!](https://github.com/Paulmski/Discord-Bot/blob/main/CONTRIBUTING.md)')
 
         if type(channel) == discord.channel.TextChannel:
-            await channel.send('', embed=embedded_message) 
+            await channel.send("Farewell, Lakehead CS 2021! Hope I was a good bot, I'm gonna miss you guys. Change da world :')")
         elif type(channel) == discord.ApplicationContext:
             await channel.respond('', embed=embedded_message)
         else:
@@ -133,11 +131,11 @@ class FetchDate(commands.Cog):
         if days_left > 3:
             days_left = f'```diff\n+ {days_left} days remaining.```'
         elif days_left > 0:
-            days_left = f'```fix\n+ {days_left} days remaining.```'
+            days_left = f'```fix\n+ {days_left} day{"s" if days_left != 1 else ""} remaining!```'
         elif days_left == 0:
             days_left = '```diff\n Due today.```'
         else:
-            days_left = f'```diff\n- {abs(days_left)} days late.```'
+            days_left = f'```diff\n- {abs(days_left)} day{"s" if days_left != -1 else ""} late.```'
 
         notes = assignment.note
 
@@ -162,19 +160,21 @@ class EventScheduler(commands.Cog):
         self.purge_study_groups.cancel()
 
     # Declare the schedule_events loop, which fully executes every 24 hours.
-    @tasks.loop(minutes=60.0)
+    @tasks.loop(time=datetime.time(6, 30, tzinfo=LOCAL_TIMEZONE))
     async def schedule_events(self):
-        
 
-        # Check if there is a break occuring
-        file = open('vacation.db', 'r')
-        #  Check file exists
-        if file != None:
-            # Since there is no guarantee as to the format of vacation.db access to it needs to be wrapped in a try/except
-            try:
+        try:
+            # Check if there is a break occuring
+            file = open('vacation.db', 'r')
+            #  Check file exists
+            if file != None:
+                logging.info('Checking vacation file...')
+                
+                # Since there is no guarantee as to the format of vacation.db access to it needs to be wrapped in a try/except
                 date = file.readline().strip()
+	        
                 # Read date break would start and check it is not an empty line
-                if date == None: 
+                if date == None:
                     file.close()
                     return
                 date = datetime.datetime.strptime(date, '%Y-%m-%d')
@@ -183,16 +183,10 @@ class EventScheduler(commands.Cog):
                 if datetime.datetime.today() < date + datetime.timedelta(days=period):
                     logging.info('The bot is on vacation so no events will be scheduled')
                     return
-            except Exception:
-                # Couldn't read the file assume there is no vacation happening
-                pass
-                
+        except Exception:
+             # Couldn't read the file assume there is no vacation happening
+             pass
 
-
-        if (datetime.datetime.now(LOCAL_TIMEZONE).hour != 6):
-            return
-        
-        
         await self.bot.wait_until_ready() # Bot needs to wait until ready, especially on the first iteration.
         # Set the class' guild state (bot.get_guild() returns a Guild object)
         guild = self.bot.get_guild(int(GUILD_ID))

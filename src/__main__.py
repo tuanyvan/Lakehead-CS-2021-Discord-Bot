@@ -38,7 +38,7 @@ def main():
 
     # Build the Google Sheets API service.
     service = gsapi_builder.build_service()
-    COURSE_CODES = list(set([f'{course.code} - {course.name}' for course in sheets_parser.fetch_courses(service, SPREADSHEET_ID, COURSE_SHEET)]))
+    COURSE_CODES = list(set([f'{course.code} - {course.name.replace(" Lab", "")}' for course in sheets_parser.fetch_courses(service, SPREADSHEET_ID, COURSE_SHEET)]))
     COURSE_CODES.sort()
     COURSE_CODES.insert(0, 'ALL')
     COURSE_CODES.insert(1, 'COURSES')
@@ -108,9 +108,9 @@ def main():
         if code.upper() == 'COURSES':
             courses = sheets_parser.fetch_courses(service, SPREADSHEET_ID, COURSE_SHEET)
             if code.upper() == 'COURSES':
-                for course in courses:
+                for course in sorted(courses, key=lambda c: (c.code)):
                     if course.code not in message:
-                        message += '\n' + course.code + ' - ' + course.name
+                        message += '\n' + course.code + ' - ' + course.name.replace(" Lab", "")
             await ctx.respond(message, delete_after=300)
             return
 
