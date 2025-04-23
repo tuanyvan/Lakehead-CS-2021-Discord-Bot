@@ -1,7 +1,7 @@
 # file app/__main__.py
 
 # Should be incremented each release.
-version_code = 'v1.1.0'
+version_code = 'v1.1.1'
 def main():
     import string
     from discord import Bot
@@ -16,6 +16,8 @@ def main():
     import events as events
     import urllib
     import re
+    import datetime
+
 
     random.seed()  # Seed the RNG.
     load_dotenv()
@@ -38,7 +40,8 @@ def main():
     service = gsapi_builder.build_service()
     COURSE_CODES = list(set([f'{course.code} - {course.name}' for course in sheets_parser.fetch_courses(service, SPREADSHEET_ID, COURSE_SHEET)]))
     COURSE_CODES.sort()
-    COURSE_CODES.insert(0, 'COURSES')
+    COURSE_CODES.insert(0, 'ALL')
+    COURSE_CODES.insert(1, 'COURSES')
 
     # Instantiate the bot.
     bot = Bot()
@@ -96,7 +99,9 @@ def main():
             return
 
         final_assignments = []
-        code = specify.upper().split()[0]
+        
+        # Code is given as a XXXX1234 - Name, so take the first part of the split string (XXXX1234)
+        code = specify.upper().split()[0] 
         assignments = sheets_parser.fetch_assignments(service, SPREADSHEET_ID, RANGE_NAME)
 
         message = '' # Message containing all specified courses.
@@ -123,6 +128,17 @@ def main():
         await fetcher.announce_assignments(final_assignments, title, ctx)
         logging.info(f'User {ctx.author} requested assignments for {code}.')
 
+    @bot.slash_command(guild_ids=[GUILD_ID])
+    async def vacation(ctx, period: Option(int, 'Amount of days for bot to go on break')):
+        '''Tell the bot to go on a vacation, it won't send announcements while it's on break.'''
+        file = open('vacation.db', 'w+')
+        # Write date break started and the duration of it
+        today = datetime.date.today()
+        file.write(today.strftime('%Y-%m-%d') + '\n' + str(period))
+        file.close()
+        await ctx.respond('The bot will take a break until: ' + (today + datetime.timedelta(days=period)).strftime('%Y-%m-%d'))
+        logging.info(f'User {ctx.author} started a vacation for {period} days until: {(today + datetime.timedelta(days=period)).strftime("%Y-%m-%d")}')
+            
     # Command to create, modify permissions for, or delete private study groups.
     @bot.slash_command(guild_ids=[GUILD_ID])
     async def group(ctx, 
@@ -269,8 +285,6 @@ def main():
                     return
             await ctx.respond(f'You are not in a group named "{group_name}".')
             
-
-
     # Print the message back.
     @bot.slash_command(guild_ids=[GUILD_ID])
     async def repeat(ctx, string):
